@@ -1,0 +1,15 @@
+#!/usr/bin/python3
+# -*- coding: UTF-8 -*-
+
+"""
+Command line script for nitpycker.
+"""
+
+from nitpycker import main
+
+
+__author__ = "Benjamin Schubert, ben.c.schubert@gmail.com"
+
+
+if __name__ == '__main__':
+    main()
