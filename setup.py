@@ -10,6 +10,7 @@ params = dict(
     version='0.1',
     packages=['nitpycker', 'nitpycker.plugins'],
     url='https://github.com/BenjaminSchubert/NitPycker',
+    download_url="https://github.com/BenjaminSchubert/NitPycker/tarball/0.1",
     license='MIT',
     author='Benjamin Schubert',
     author_email='ben.c.schubert@gmail.com',
