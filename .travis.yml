@@ -1,7 +1,13 @@
 language: python
+
 python:
   - "3.4"
   - "3.5"
 
+install:
+  pip install coveralls coverage
 
-script: python -m nitpycker .
+script: python -m nitpycker -n4 --with-coverage --cover-no-stdout --cover-inclusive .
+
+after_success:
+  coveralls
