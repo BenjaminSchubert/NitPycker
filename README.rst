@@ -19,7 +19,7 @@ For a complete documentation guide, please see Nitpycker's documentation on `rea
 Quick start
 -----------
 
-See the `quick start` section of the docs
+See the `quick start`_ section of the docs
 
 
 .. _readthedocs: http://nitpycker.readthedocs.org/en/latest/
