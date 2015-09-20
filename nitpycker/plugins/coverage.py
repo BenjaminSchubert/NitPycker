@@ -43,9 +43,6 @@ class Coverage(Plugin):
         :param parser: the argument parser to which to add the arguments
         :param kwargs: additional arguments
         """
-        if not COVERAGE_AVAILABLE:
-            return
-
         group = parser.add_argument_group("Coverage")
         super().add_arguments(group, **kwargs)
         group.add_argument("--cover-xml", action="store_true", dest="cover_xml", help="generates a xml report")
@@ -170,3 +167,8 @@ class Coverage(Plugin):
 
         part = functools.partial(setup_process, self.cover_branch)
         multiprocessing.util.register_after_fork(part, part)
+
+
+if not COVERAGE_AVAILABLE:
+    # we unset Coverage if it's not available
+    Coverage = None
