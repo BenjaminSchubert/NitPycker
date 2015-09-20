@@ -12,8 +12,12 @@ import multiprocessing
 import multiprocessing.util
 import unittest
 
-import coverage
-import coverage.collector
+try:
+    import coverage
+    import coverage.collector
+    COVERAGE_AVAILABLE = True
+except ImportError:
+    COVERAGE_AVAILABLE = False
 
 from nitpycker.plugins import Plugin
 
@@ -39,6 +43,9 @@ class Coverage(Plugin):
         :param parser: the argument parser to which to add the arguments
         :param kwargs: additional arguments
         """
+        if not COVERAGE_AVAILABLE:
+            return
+
         group = parser.add_argument_group("Coverage")
         super().add_arguments(group, **kwargs)
         group.add_argument("--cover-xml", action="store_true", dest="cover_xml", help="generates a xml report")
