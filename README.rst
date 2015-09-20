@@ -13,11 +13,14 @@ NitPycker : parallelism for python's unittests
 NitPycker is a python module to allow you to run tests in parallel. If your code works with unittest, integrating
 Nitpycker should be instant.
 
-For a complete documentation guide, please see Nitpycker's documentation on readthedocs
+For a complete documentation guide, please see Nitpycker's documentation on `readthedocs`_
 
 
 Quick start
 -----------
 
-See the quick start section of the docs
+See the `quick start` section of the docs
 
+
+.. _readthedocs: http://nitpycker.readthedocs.org/en/latest/
+.. _quick start: http://nitpycker.readthedocs.org/en/latest/#quickstart
