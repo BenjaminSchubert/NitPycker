@@ -205,7 +205,7 @@ class ResultCollector(threading.Thread):
                         self.CHANGEME.addUnexpectedSuccess(test)
                     else:
                         raise Exception("This is not a valid test type :", result)
-                print("ADDED TEST")
+                print("ADDED TEST", test)
                 self.result_queue.task_done()
 
         time_taken = time.time() - start_time

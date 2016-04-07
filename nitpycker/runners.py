@@ -45,7 +45,7 @@ class ParallelRunner:
         def run(self) -> None:
             """ Launches the test and notifies of the result """
             self.manager.pre_test_start(self.test)
-
+            print(self.test)
             self.test(self.results)
 
             self.manager.post_test_end(self.test)
