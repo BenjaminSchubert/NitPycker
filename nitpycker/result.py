@@ -74,7 +74,9 @@ class InterProcessResult(unittest.result.TestResult):
         print("PICKLING OBJECT")
         dill.detect.trace(True)
         print(dill.dumps(exc_info))
-        print("IT WORKED")
+        print("##### - BADTYPES - ", dill.detect.badtypes(exc_info, depth=3))
+        print("##### - BADOBJECTS - ", dill.detect.badobjects(exc_info, depth=3))
+        print("DONE PICKLING")
         self.result_queue.put((_type, test, exc_info))
 
     def addSuccess(self, test: unittest.case.TestCase) -> None:
