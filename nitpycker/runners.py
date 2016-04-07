@@ -53,7 +53,9 @@ class ParallelRunner:
                 print("#"*50)
                 print(dill.settings.values())
                 dill.detect.trace(True)
-                print(dill.dumps(self.test))
+                dill.pickles(self.test)
+                print(dill.detect.badtypes(self.test))
+                print("ERRORS", dill.detect.errors(self.test), "END ERRORS")
                 print("#"*50)
             finally:
                 self.task_done.release()
