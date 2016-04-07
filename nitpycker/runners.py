@@ -51,9 +51,7 @@ class ParallelRunner:
                 self.test(self.results)
                 self.manager.post_test_end(self.test)
             except Exception as e:
-                print("#"*50)
-                pickle.dumps(self.test)
-                print("#"*50)
+                print("##", e)
             finally:
                 self.task_done.release()
 
