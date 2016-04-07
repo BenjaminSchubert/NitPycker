@@ -71,19 +71,19 @@ class InterProcessResult(unittest.result.TestResult):
             exc_info = FrozenExcInfo(exc_info)
 
             try:
-                pickle.dumps(exc_info[0])
+                pickle.dumps(exc_info[2].tb_frame)
             except Exception as e:
-                print("FAILED : 0", e)
+                print("FAILED: FRAME", e)
 
-            try:
-                pickle.dumps(exc_info[1])
-            except Exception as e:
-                print("FAILED : 1", e)
+        try:
+            pickle.dumps(exc_info[2].tb_next)
+        except Exception as e:
+            print("FAILED: NEXT", e)
 
-            try:
-                pickle.dumps(exc_info[2])
-            except Exception as e:
-                print("FAILED: 2", e)
+        try:
+            pickle.dumps(exc_info[2].tb_lineno)
+        except Exception as e:
+            print("FAILED: LINENO", e)
 
         test.time_taken = time.time() - self.start_time
         test._outcome = None
