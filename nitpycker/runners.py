@@ -47,11 +47,11 @@ class ParallelRunner:
             try:
                 self.manager.pre_test_start(self.test)
             except Exception as e:
-                print("#" * 50, "-"*15, "\nFAILED IN PRE_TEST_START", self.test, "\n", e, "\n", "#" * 50)
+                print("#" * 50, "-"*15, "\nFAILED IN PRE_TEST_START", self.test, "\n", e, "\n", dir(self.test), "\n", "#" * 50)
             try:
                 self.test(self.results)
             except Exception as e:
-                print("#" * 50, "-"*15, "\nFAILED IN RUN", self.test, "\n", e, "\n", "#" * 50)
+                print("#" * 50, "-"*15, "\nFAILED IN RUN", self.test, "\n", e, "\n", dir(self.test), "\n","#" * 50)
 
             try:
                 self.manager.post_test_end(self.test)
