@@ -22,6 +22,8 @@ import collections
 
 import pickle
 
+import dill
+
 from nitpycker.excinfo import FrozenExcInfo
 
 
@@ -70,7 +72,8 @@ class InterProcessResult(unittest.result.TestResult):
         test.time_taken = time.time() - self.start_time
         test._outcome = None
         print("PICKLING OBJECT")
-        pickle.dumps(exc_info)
+        dill.detect.trace(True)
+        print(dill.dumps(exc_info))
         print("IT WORKED")
         self.result_queue.put((_type, test, exc_info))
 
