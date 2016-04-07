@@ -51,8 +51,9 @@ class ParallelRunner:
                 self.manager.post_test_end(self.test)
             except Exception as e:
                 print("#"*50)
+                print(dill.settings.values())
                 dill.detect.trace(True)
-                print(dill.pickle(self.test))
+                print(dill.dumps(self.test))
                 print("#"*50)
             finally:
                 self.task_done.release()
@@ -134,22 +135,16 @@ class ParallelRunner:
         results_collector.start()
 
         for suite in test_suites:
-            print("LAUNCHING TEST FOR SUITE", suite)
             tasks_running.acquire()
             x = self.Process(suite, results_queue, self.plugins_manager, tasks_running)
             x.start()
-            print("STARTED PROCESS")
             process.append(x)
 
         for i in process:
-            print("JOINING", i)
             i.join()
 
-        print("JOINING RESULT QUEUE")
         results_queue.join()
-        print("STOPPING COLLECTOR")
         results_collector.end_collection()
-        print("JOINGING COLLECTOR")
         results_collector.join()
 
         return results_collector.exitcode
