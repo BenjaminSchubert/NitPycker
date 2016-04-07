@@ -20,6 +20,8 @@ from unittest.runner import _WritelnDecorator
 
 import collections
 
+import pickle
+
 from nitpycker.excinfo import FrozenExcInfo
 
 
@@ -67,6 +69,9 @@ class InterProcessResult(unittest.result.TestResult):
             exc_info = FrozenExcInfo(exc_info)
         test.time_taken = time.time() - self.start_time
         test._outcome = None
+        print("PICKLING OBJECT")
+        pickle.dumps(exc_info)
+        print("IT WORKED")
         self.result_queue.put((_type, test, exc_info))
 
     def addSuccess(self, test: unittest.case.TestCase) -> None:
