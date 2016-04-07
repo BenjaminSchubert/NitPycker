@@ -69,15 +69,25 @@ class InterProcessResult(unittest.result.TestResult):
         """
         if exc_info is not None:
             exc_info = FrozenExcInfo(exc_info)
+
+            try:
+                pickle.dumps(exc_info[0])
+            except Exception as e:
+                print("FAILED : 0", e)
+
+            try:
+                pickle.dumps(exc_info[1])
+            except Exception as e:
+                print("FAILED : 1", e)
+
+            try:
+                pickle.dumps(exc_info[2])
+            except Exception as e:
+                print("FAILED: 2", e)
+
         test.time_taken = time.time() - self.start_time
         test._outcome = None
-        print("PICKLING OBJECT")
-        dill.detect.trace(True)
-        print(dill.dumps(exc_info))
-        print("##### - BADTYPES - ", dill.detect.badtypes(exc_info, depth=1))
-        print("##### - BADOBJECTS - ", dill.detect.badobjects(exc_info, depth=1))
-        print("##### - ERRORS - ", dill.detect.errors(exc_info))
-        print("DONE PICKLING")
+
         self.result_queue.put((_type, test, exc_info))
 
     def addSuccess(self, test: unittest.case.TestCase) -> None:
