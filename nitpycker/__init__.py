@@ -76,5 +76,4 @@ def main() -> bool:
     tests = unittest.defaultTestLoader.discover(args.start_directory, pattern=args.pattern)
     plugin_manager.post_test_discovery()
     tests = plugin_manager.filter_tests(tests)
-    report = ParallelRunner(plugin_manager, process_number=args.process_number, verbosity=args.verbosity).run(tests)
-    return not report.wasSuccessful()
+    return not ParallelRunner(plugin_manager, process_number=args.process_number, verbosity=args.verbosity).run(tests)

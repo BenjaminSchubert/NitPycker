@@ -14,9 +14,7 @@ import logging
 import os
 import unittest
 
-from nitpycker.plugins.text_reporter import TextReporter
 from nitpycker.plugins import Plugin, TestReporter
-from nitpycker.result import ResultAggregator
 
 __author__ = "Benjamin Schubert, ben.c.schubert@gmail.com"
 
@@ -126,7 +124,7 @@ class Manager:
         for plugin in self.enabled_plugins:
             plugin.post_test_end(test)
 
-    def report(self, results: ResultAggregator) -> None:
+    def report(self, results) -> None:
         """
         allows every plugin to generate a report once all tests have finished
 
@@ -137,9 +135,6 @@ class Manager:
             if hasattr(plugin, "__reporter__"):
                 plugin.report(results)
                 reported = True
-
-        if not reported:
-            TextReporter().report(results)
 
         for plugin in self.enabled_plugins:
             if not hasattr(plugin, "__reporter__"):

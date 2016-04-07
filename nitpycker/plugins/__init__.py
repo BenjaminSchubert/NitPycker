@@ -12,7 +12,6 @@ import argparse
 import logging
 import unittest
 
-from nitpycker.result import ResultAggregator
 
 __author__ = "Benjamin Schubert, ben.c.schubert@gmail.com"
 
@@ -99,7 +98,7 @@ class Plugin(metaclass=ABCMeta):
         """
         pass
 
-    def report(self, results: ResultAggregator) -> None:
+    def report(self, results) -> None:
         """
         Runs after the end of all tests, to generate report files and cleanup
 

@@ -9,11 +9,10 @@ import multiprocessing
 import queue
 import sys
 import threading
-import time
 import unittest
 
 from nitpycker.plugins.manager import Manager
-from nitpycker.result import InterProcessResult, ResultCollector, ResultAggregator, TestState
+from nitpycker.result import InterProcessResult, ResultCollector
 
 __author__ = "Benjamin Schubert, ben.c.schubert@gmail.com"
 
@@ -58,30 +57,14 @@ class ParallelRunner:
         self.process_number = process_number
 
     @staticmethod
-    def print_summary(report: ResultAggregator, time_taken: float) -> None:
+    def print_summary(report, time_taken: float) -> None:
         """
         Prints a summary of the tests on the screen
 
         :param report: the test report
         :param time_taken: the time it took to run the whole testSuite
         """
-        number_of_tests = sum(len(x) for x in report.results.values())
 
-        print("Ran {number_of_tests} test{s} in {time:.2f}s\n".format(
-            number_of_tests=number_of_tests, s="s" if number_of_tests >= 1 else "", time=time_taken), file=sys.stderr
-        )
-        status = "OK" if report.wasSuccessful() else "FAILED"
-        info = []
-        for state in TestState:
-            if report.results[state.name] and state.name != TestState.success.name:
-                info.append("{description}={number}".format(
-                    description=state.name.replace("_", " "), number=len(report.results[state.name]))
-                )
-
-        if len(info) != 0:
-            print(status, "({})".format(", ".join(info)), file=sys.stderr)
-        else:
-            print(status, file=sys.stderr)
 
     @staticmethod
     def module_can_run_parallel(test_module: unittest.TestSuite) -> bool:
@@ -106,7 +89,7 @@ class ParallelRunner:
         for test_case in test_class:
             return not getattr(test_case, "__no_parallel__", False)
 
-    def run(self, test: unittest.TestSuite) -> ResultAggregator:
+    def run(self, test: unittest.TestSuite):
         """
         Given a TestSuite, will create one process per test case whenever possible and run them concurrently.
         Will then wait for the result and return them
@@ -117,10 +100,7 @@ class ParallelRunner:
         process = []
         resource_manager = multiprocessing.Manager()
         results_queue = resource_manager.Queue()
-        report_queue = resource_manager.Queue()
         tasks_running = resource_manager.BoundedSemaphore(self.process_number)
-
-        start_time = time.time()
 
         test_suites = []
         number_of_tests = 0
@@ -143,7 +123,7 @@ class ParallelRunner:
                     test_suites.append(test_suite)
 
         results_collector = ResultCollector(
-            results_queue, report_queue, self.verbosity, daemon=True, number_of_tests=number_of_tests
+            results_queue, self.verbosity, daemon=True, number_of_tests=number_of_tests
         )
         results_collector.start()
 
@@ -156,18 +136,8 @@ class ParallelRunner:
         for i in process:
             i.join()
 
-        stop_time = time.time()
-
         results_queue.join()
         results_collector.end_collection()
         results_collector.join()
-        report = ResultAggregator(report_queue.get())
 
-        time_taken = stop_time - start_time
-
-        self.plugins_manager.report(report)
-
-        if self.verbosity:
-            self.print_summary(report, time_taken)
-
-        return report
+        return results_collector.exitcode

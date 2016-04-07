@@ -11,7 +11,7 @@ import os
 from xml.etree import ElementTree
 
 from nitpycker.plugins import TestReporter
-from nitpycker.result import TestState, ResultAggregator
+from nitpycker.result import TestState
 
 __author__ = "Benjamin Schubert, ben.c.schubert@gmail.com"
 
@@ -60,7 +60,7 @@ class XMLReporter(TestReporter):
                     testcase.append(fail_type)
                 report.append(testcase)
 
-    def report(self, result_reporter: ResultAggregator) -> None:
+    def report(self, result_reporter) -> None:
         """
         creates an xml rapport for the test. This is xunit compliant
 
