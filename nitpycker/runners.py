@@ -134,10 +134,14 @@ class ParallelRunner:
             process.append(x)
 
         for i in process:
+            print("JOINING", i)
             i.join()
 
+        print("JOINING RESULT QUEUE")
         results_queue.join()
+        print("STOPPING COLLECTOR")
         results_collector.end_collection()
+        print("JOINGING COLLECTOR")
         results_collector.join()
 
         return results_collector.exitcode
