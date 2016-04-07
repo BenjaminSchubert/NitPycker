@@ -4,7 +4,7 @@
 """
 This modules implements a Parallel test runner for unittest
 """
-
+import inspect
 import multiprocessing
 import queue
 import sys
@@ -46,19 +46,14 @@ class ParallelRunner:
             """ Launches the test and notifies of the result """
             try:
                 self.manager.pre_test_start(self.test)
-            except Exception as e:
-                print("#" * 50, "-"*15, "\nFAILED IN PRE_TEST_START", self.test, "\n", e, "\n", dir(self.test), "\n", "#" * 50)
-            try:
                 self.test(self.results)
-            except Exception as e:
-                print("#" * 50, "-"*15, "\nFAILED IN RUN", self.test, "\n", e, "\n", dir(self.test), "\n","#" * 50)
-
-            try:
                 self.manager.post_test_end(self.test)
             except Exception as e:
-                print("#" * 50, "-"*15, "\nFAILED IN POST_TEST_END", self.test, "\n", e, "\n", "#" * 50)
+                print("#"*50)
+                print(e)
+                print(inspect.getmembers(self.test))
+                print("#"*50)
             finally:
-                print("RELEASING LOCK")
                 self.task_done.release()
 
     def __init__(self, plugins_manager: Manager, process_number: int, verbosity: int):
