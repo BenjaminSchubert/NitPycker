@@ -8,8 +8,8 @@ install:
   pip install coveralls coverage\<4.0
 
 script:
-  - rm .coverage
-  - python3 -m coverage run --branch --concurrency=multiprocessing -p -m nitpycker .
+  - rm -f .coverage
+  - python3 -m coverage run --branch -p -m nitpycker .
   - python3 -m coverage combine
 
 after_success:
