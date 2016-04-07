@@ -128,9 +128,11 @@ class ParallelRunner:
         results_collector.start()
 
         for suite in test_suites:
+            print("LAUNCHING TEST FOR SUITE", suite)
             tasks_running.acquire()
             x = self.Process(suite, results_queue, self.plugins_manager, tasks_running)
             x.start()
+            print("STARTED PROCESS")
             process.append(x)
 
         for i in process:
