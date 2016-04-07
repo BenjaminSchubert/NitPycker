@@ -74,8 +74,9 @@ class InterProcessResult(unittest.result.TestResult):
         print("PICKLING OBJECT")
         dill.detect.trace(True)
         print(dill.dumps(exc_info))
-        print("##### - BADTYPES - ", dill.detect.badtypes(exc_info, depth=3))
-        print("##### - BADOBJECTS - ", dill.detect.badobjects(exc_info, depth=3))
+        print("##### - BADTYPES - ", dill.detect.badtypes(exc_info, depth=1))
+        print("##### - BADOBJECTS - ", dill.detect.badobjects(exc_info, depth=1))
+        print("##### - ERRORS - ", dill.detect.errors(exc_info))
         print("DONE PICKLING")
         self.result_queue.put((_type, test, exc_info))
 
