@@ -11,6 +11,7 @@ import sys
 import threading
 import unittest
 import dill
+import pickle
 
 from nitpycker.plugins.manager import Manager
 from nitpycker.result import InterProcessResult, ResultCollector
@@ -51,8 +52,7 @@ class ParallelRunner:
                 self.manager.post_test_end(self.test)
             except Exception as e:
                 print("#"*50)
-                dill.detect.trace(True)
-                print(map(dill.pickles(self.test)))
+                pickle.dumps(self.test)
                 print("#"*50)
             finally:
                 self.task_done.release()
