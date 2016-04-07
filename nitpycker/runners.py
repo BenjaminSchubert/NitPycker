@@ -51,10 +51,10 @@ class ParallelRunner:
                 self.manager.post_test_end(self.test)
             except Exception as e:
                 print("#"*50)
-                print(dill.settings.values())
                 dill.detect.trace(True)
                 dill.pickles(self.test)
-                print(dill.detect.badtypes(self.test))
+                print("BADTYPES", dill.detect.badtypes(self.test, depth=1), "END BADTYPES")
+                print("BADOBJECTS", dill.detect.badobjects(self.test, depth=1), "END BADOBJECTS")
                 print("ERRORS", dill.detect.errors(self.test), "END ERRORS")
                 print("#"*50)
             finally:
