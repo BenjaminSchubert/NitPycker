@@ -5,7 +5,7 @@ python:
   - "3.5"
 
 install:
-  pip install coveralls coverage==4.1b2
+  pip install coveralls coverage==4.1b2 dill
 
 script:
   - rm -f .coverage

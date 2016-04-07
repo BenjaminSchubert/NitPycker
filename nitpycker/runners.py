@@ -10,6 +10,7 @@ import queue
 import sys
 import threading
 import unittest
+import dill
 
 from nitpycker.plugins.manager import Manager
 from nitpycker.result import InterProcessResult, ResultCollector
@@ -50,8 +51,8 @@ class ParallelRunner:
                 self.manager.post_test_end(self.test)
             except Exception as e:
                 print("#"*50)
-                print(e)
-                print(inspect.getmembers(self.test))
+                dill.detect.trace(True)
+                print(dill.pickle(self.test))
                 print("#"*50)
             finally:
                 self.task_done.release()
