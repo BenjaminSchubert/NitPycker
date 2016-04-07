@@ -25,6 +25,7 @@ class FrozenTbFrame:
         self.__f_code = FrozenFCode(tb_frame.f_code)
         to_remove = []
         for key, item in self.__f_globals.items():
+            print("-" * 15, "ENTRY IS : ", str(item))
             if "module" in str(item) or "site.setquit.<locals>.Quitter" in str(item):
                 to_remove.append(key)
 
