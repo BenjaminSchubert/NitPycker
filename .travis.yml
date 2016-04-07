@@ -9,8 +9,9 @@ install:
 
 script:
   - rm -f .coverage
-  - python3 -m coverage run --branch --concurrency=multiprocessing -p -m nitpycker .
-  - python3 -m coverage combine
+  - python3 -m nitpycker .
+#  - python3 -m coverage run --branch --concurrency=multiprocessing -p -m nitpycker .
+#  - python3 -m coverage combine
 
 after_success:
   coveralls
