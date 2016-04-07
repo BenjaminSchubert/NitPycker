@@ -50,6 +50,10 @@ class ParallelRunner:
                 self.test(self.results)
 
                 self.manager.post_test_end(self.test)
+            except Exception as e:
+                print("#"*50)
+                print(e)
+                print("#"*50)
             finally:
                 print("RELEASING LOCK")
                 self.task_done.release()
