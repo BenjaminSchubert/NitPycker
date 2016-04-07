@@ -53,8 +53,8 @@ class ParallelRunner:
                 print("#"*50)
                 dill.detect.trace(True)
                 dill.pickles(self.test)
-                print("BADTYPES", dill.detect.badtypes(self.test, depth=1), "END BADTYPES")
-                print("BADOBJECTS", dill.detect.badobjects(self.test, depth=1), "END BADOBJECTS")
+                print("BADTYPES", dill.detect.badtypes(self.test, depth=5), "END BADTYPES")
+                print("BADOBJECTS", dill.detect.badobjects(self.test, depth=5), "END BADOBJECTS")
                 print("ERRORS", dill.detect.errors(self.test), "END ERRORS")
                 print("#"*50)
             finally:
