@@ -44,12 +44,12 @@ class ParallelRunner:
 
         def run(self) -> None:
             """ Launches the test and notifies of the result """
-            self.manager.pre_test_start(self.test)
-
-            self.test(self.results)
-
-            self.manager.post_test_end(self.test)
-            self.task_done.release()
+            try:
+                self.manager.pre_test_start(self.test)
+                self.test(self.results)
+                self.manager.post_test_end(self.test)
+            finally:
+                self.task_done.release()
 
     def __init__(self, plugins_manager: Manager, process_number: int, verbosity: int):
         self.verbosity = verbosity
