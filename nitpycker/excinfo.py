@@ -3,6 +3,8 @@
 
 import sys
 
+import builtins
+
 
 __author__ = "Benjamin Schubert <ben.c.schubert@gmail.com>"
 
@@ -74,8 +76,8 @@ class FrozenTraceback:
 
 class FrozenExcInfo:
     def __init__(self, exc_info):
-        quit = non_private_exit
-        exit = non_private_exit
+        builtins.quit = non_private_exit
+        builtins.exit = non_private_exit
         self.infos = exc_info[:2] + (FrozenTraceback(exc_info[2]),)
 
     def __getitem__(self, item):
