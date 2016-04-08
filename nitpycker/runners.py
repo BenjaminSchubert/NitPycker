@@ -4,17 +4,15 @@
 """
 This modules implements a Parallel test runner for unittest
 """
-import inspect
 import multiprocessing
 import queue
 import sys
 import threading
 import unittest
-import dill
-import pickle
 
 from nitpycker.plugins.manager import Manager
 from nitpycker.result import InterProcessResult, ResultCollector
+
 
 __author__ = "Benjamin Schubert, ben.c.schubert@gmail.com"
 

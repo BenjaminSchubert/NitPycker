@@ -20,10 +20,6 @@ from unittest.runner import _WritelnDecorator
 
 import collections
 
-import pickle
-
-import dill
-
 from nitpycker.excinfo import FrozenExcInfo
 
 
@@ -69,21 +65,6 @@ class InterProcessResult(unittest.result.TestResult):
         """
         if exc_info is not None:
             exc_info = FrozenExcInfo(exc_info)
-
-            try:
-                pickle.dumps(exc_info[2].tb_frame)
-            except Exception as e:
-                print("FAILED: FRAME", e)
-
-        try:
-            pickle.dumps(exc_info[2].tb_next)
-        except Exception as e:
-            print("FAILED: NEXT", e)
-
-        try:
-            pickle.dumps(exc_info[2].tb_lineno)
-        except Exception as e:
-            print("FAILED: LINENO", e)
 
         test.time_taken = time.time() - self.start_time
         test._outcome = None
@@ -167,7 +148,6 @@ class ResultCollector(threading.Thread):
 
     def end_collection(self) -> None:
         """ Tells the thread that is it time to end """
-        print("CALLED GOODBYE")
         self.cleanup = True
 
     @property
