@@ -10,6 +10,7 @@ __author__ = "Benjamin Schubert <ben.c.schubert@gmail.com>"
 
 
 def non_private_exit(code):
+    # noinspection PyBroadException
     try:
         sys.stdin.close()
     except:

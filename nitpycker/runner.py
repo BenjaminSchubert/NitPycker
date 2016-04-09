@@ -11,7 +11,6 @@ import sys
 import threading
 import unittest
 
-from nitpycker.plugins.manager import Manager
 from nitpycker.result import InterProcessResult, ResultCollector
 
 __author__ = "Benjamin Schubert, ben.c.schubert@gmail.com"
@@ -21,7 +20,6 @@ class ParallelRunner:
     """
     A parallel test runner for unittest
 
-    :param plugins_manager: the manager to use for plugin handling
     :param process_number: the number of process to launch to run the tests
     :param verbosity: Processes verbosity
     """
@@ -34,37 +32,24 @@ class ParallelRunner:
         :param manager: the plugin manager to be called before and after the run
         :param task_done_notifier: semaphore to acquire to notify from end of task
         """
-        def __init__(self, test: unittest.TestSuite, results_queue: queue.Queue, manager: Manager,
+        def __init__(self, test: unittest.TestSuite, results_queue: queue.Queue,
                      task_done_notifier: threading.Semaphore, **kwargs):
             super().__init__(**kwargs)
             self.test = test
             self.results = InterProcessResult(results_queue)
-            self.manager = manager
             self.task_done = task_done_notifier
 
         def run(self) -> None:
             """ Launches the test and notifies of the result """
             try:
-                self.manager.pre_test_start(self.test)
                 self.test(self.results)
-                self.manager.post_test_end(self.test)
             finally:
                 self.task_done.release()
 
-    def __init__(self, plugins_manager: Manager, process_number: int, verbosity: int):
+    def __init__(self, stream=None, descriptions=True, verbosity=1, failfast=False, buffer=False, resultclass=None,
+                 warnings=None, process_number=multiprocessing.cpu_count()):
         self.verbosity = verbosity
-        self.plugins_manager = plugins_manager
         self.process_number = process_number
-
-    @staticmethod
-    def print_summary(report, time_taken: float) -> None:
-        """
-        Prints a summary of the tests on the screen
-
-        :param report: the test report
-        :param time_taken: the time it took to run the whole testSuite
-        """
-
 
     @staticmethod
     def module_can_run_parallel(test_module: unittest.TestSuite) -> bool:
@@ -123,13 +108,12 @@ class ParallelRunner:
                     test_suites.append(test_suite)
 
         results_collector = ResultCollector(
-            results_queue, self.verbosity, daemon=True, number_of_tests=number_of_tests
-        )
+            results_queue, self.verbosity, daemon=True)
         results_collector.start()
 
         for suite in test_suites:
             tasks_running.acquire()
-            x = self.Process(suite, results_queue, self.plugins_manager, tasks_running)
+            x = self.Process(suite, results_queue, tasks_running)
             x.start()
             process.append(x)
 
@@ -140,4 +124,4 @@ class ParallelRunner:
         results_collector.end_collection()
         results_collector.join()
 
-        return results_collector.exitcode
+        return results_collector

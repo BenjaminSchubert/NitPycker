@@ -18,6 +18,7 @@ class MyTestCase(unittest.TestCase):
     def test_success(self):
         self.assertEqual(True, True)
 
+    # noinspection PyMethodMayBeStatic
     def test_error(self):
         raise Exception()
 

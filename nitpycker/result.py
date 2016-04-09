@@ -13,7 +13,6 @@ import time
 import unittest
 import unittest.case
 import unittest.result
-from contextlib import suppress
 
 # noinspection PyProtectedMember
 from unittest.runner import _WritelnDecorator
@@ -75,6 +74,7 @@ class InterProcessResult(unittest.result.TestResult):
 
         :param test: the test to save
         """
+        # noinspection PyTypeChecker
         self.add_result(TestState.success, test)
 
     def addFailure(self, test: unittest.case.TestCase, exc_info: tuple) -> None:
@@ -84,6 +84,7 @@ class InterProcessResult(unittest.result.TestResult):
         :param test: the test to save
         :param exc_info: tuple of the form (Exception class, Exception instance, traceback)
         """
+        # noinspection PyTypeChecker
         self.add_result(TestState.failure, test, exc_info)
 
     def addError(self, test: unittest.case.TestCase, exc_info: tuple) -> None:
@@ -93,6 +94,7 @@ class InterProcessResult(unittest.result.TestResult):
         :param test: the test to save
         :param exc_info: tuple of the form (Exception class, Exception instance, traceback)
         """
+        # noinspection PyTypeChecker
         self.add_result(TestState.error, test, exc_info)
 
     def addExpectedFailure(self, test: unittest.case.TestCase, err: tuple) -> None:
@@ -102,6 +104,7 @@ class InterProcessResult(unittest.result.TestResult):
         :param test: the test to save
         :param err: tuple of the form (Exception class, Exception instance, traceback)
         """
+        # noinspection PyTypeChecker
         self.add_result(TestState.expected_failure, test, err)
 
     def addUnexpectedSuccess(self, test: unittest.case.TestCase) -> None:
@@ -110,6 +113,7 @@ class InterProcessResult(unittest.result.TestResult):
 
         :param test: the test to save
         """
+        # noinspection PyTypeChecker
         self.add_result(TestState.unexpected_success, test)
 
     def addSkip(self, test: unittest.case.TestCase, reason: str):
@@ -129,15 +133,13 @@ class ResultCollector(threading.Thread):
     Results handler. Given a report queue, will reform a complete report from it as what would come from a run
     of unittest.TestResult
     """
-    def __init__(self, result_queue: queue.Queue, verbosity: int, number_of_tests: str="?",
-                 **kwargs):
+    def __init__(self, result_queue: queue.Queue, verbosity: int, **kwargs):
         super().__init__(**kwargs)
-        self.CHANGEME = unittest.TextTestResult(_WritelnDecorator(sys.stderr), True, 1)
+        self.CHANGEME = unittest.TextTestResult(_WritelnDecorator(sys.stderr), True, 1)  # FIXME : remove
         self.result_queue = result_queue
         self.cleanup = False
         self.showAll = verbosity > 1
         self.dots = verbosity == 1
-        self.number_of_tests = number_of_tests
         self.__exit_code = None
 
         self.results = {}
@@ -148,13 +150,21 @@ class ResultCollector(threading.Thread):
         """ Tells the thread that is it time to end """
         self.cleanup = True
 
-    @property
-    def exitcode(self):
+    def wasSuccessful(self):
+        """ returns the exit value of this thread"""
         if self.__exit_code is None:
             raise Exception("Couldn't get the thread exit code")
         return self.__exit_code
 
-    def print_summary(self, counters, success_counter, time_taken):
+    @staticmethod
+    def print_summary(counters, success_counter, time_taken):
+        """
+        Prints the test summary, how many, how long it took, etc
+
+        :param counters: a collections.Counter containing failing tests
+        :param success_counter: number of successful tests
+        :param time_taken: the time all tests took to run
+        """
         errors = sum(counters.values())
 
         sys.stderr.write("-" * 70 + "\n")
@@ -184,28 +194,30 @@ class ResultCollector(threading.Thread):
         start_time = time.time()
 
         while not self.cleanup:
-            with suppress(queue.Empty):
+            try:
                 result, test, additional_info = self.result_queue.get(timeout=1)
+            except queue.Empty:
+                continue
 
-                if result == TestState.success:
-                    self.CHANGEME.addSuccess(test)
-                    success_counter += 1
+            self.result_queue.task_done()
+
+            if result == TestState.success:
+                self.CHANGEME.addSuccess(test)
+                success_counter += 1
+            else:
+                counters.update((result,))
+                if result == TestState.failure:
+                    self.CHANGEME.addFailure(test, additional_info)
+                elif result == TestState.error:
+                    self.CHANGEME.addError(test, additional_info)
+                elif result == TestState.skipped:
+                    self.CHANGEME.addSkip(test, additional_info)
+                elif result == TestState.expected_failure:
+                    self.CHANGEME.addExpectedFailure(test, additional_info)
+                elif result == TestState.unexpected_success:
+                    self.CHANGEME.addUnexpectedSuccess(test)
                 else:
-                    counters.update((result,))
-                    if result == TestState.failure:
-                        self.CHANGEME.addFailure(test, additional_info)
-                    elif result == TestState.error:
-                        self.CHANGEME.addError(test, additional_info)
-                    elif result == TestState.skipped:
-                        self.CHANGEME.addSkip(test, additional_info)
-                    elif result == TestState.expected_failure:
-                        self.CHANGEME.addExpectedFailure(test, additional_info)
-                    elif result == TestState.unexpected_success:
-                        self.CHANGEME.addUnexpectedSuccess(test)
-                    else:
-                        raise Exception("This is not a valid test type :", result)
-
-                self.result_queue.task_done()
+                    raise Exception("This is not a valid test type :", result)
 
         time_taken = time.time() - start_time
 

@@ -1,15 +1,25 @@
-#!/usr/bin/python3
-# -*- coding: UTF-8 -*-
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 
 """
-Module launcher for NitPycker
+Main entry point
+
+Copying exactly the one from unittest
 """
 
-from nitpycker import main
+import sys
+if sys.argv[0].endswith("__main__.py"):
+    import os.path
+    # We change sys.argv[0] to make help message more useful
+    # use executable without path, unquoted
+    # (it's just a hint anyway)
+    # (if you have spaces in your executable you get what you deserve!)
+    executable = os.path.basename(sys.executable)
+    sys.argv[0] = executable + " -m nitpycker"
+    del os
 
+__unittest = True
 
-__author__ = "Benjamin Schubert, ben.c.schubert@gmail.com"
+from .main import main
 
-
-if __name__ == "__main__":
-    exit(main())
+main(module=None)
