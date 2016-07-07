@@ -1,0 +1,8 @@
+[run]
+branch = True
+
+cover_pylib = False
+omit = */site.py
+
+concurrency = multiprocessing
+parallel = True

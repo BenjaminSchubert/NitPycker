@@ -58,6 +58,7 @@ More information
     :maxdepth: 1
 
     cmd
+    coverage
     problems
 
 
