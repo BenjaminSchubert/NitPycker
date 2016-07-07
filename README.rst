@@ -4,8 +4,8 @@ NitPycker : parallelism for python's unittests
 
 .. image:: https://travis-ci.org/BenjaminSchubert/NitPycker.svg
     :target: https://travis-ci.org/BenjaminSchubert/NitPycker
-.. image:: https://coveralls.io/repos/BenjaminSchubert/NitPycker/badge.svg?branch=master&service=github
-  :target: https://coveralls.io/github/BenjaminSchubert/NitPycker?branch=master
+.. image:: https://coveralls.io/repos/github/BenjaminSchubert/NitPycker/badge.svg?branch=master
+    :target: https://coveralls.io/github/BenjaminSchubert/NitPycker?branch=master
 .. image:: https://readthedocs.org/projects/nitpycker/badge/?version=latest
     :target: http://nitpycker.readthedocs.org/en/latest/?badge=latest
     :alt: Documentation Status

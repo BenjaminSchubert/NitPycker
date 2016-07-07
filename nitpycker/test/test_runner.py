@@ -9,8 +9,7 @@ import unittest
 import re
 import collections
 
-from nitpycker.plugins.manager import Manager
-from nitpycker.runners import ParallelRunner
+from nitpycker.runner import ParallelRunner
 from nitpycker.test import NUMBER_OF_PROCESS, run_tests
 
 __author__ = "Benjamin Schubert, ben.c.schubert@gmail.com"
@@ -35,6 +34,7 @@ class MainTest(unittest.TestCase):
         unittest_results, unittest_output = _unittest.split("\n", 1)
         nitpycker_results, nitpycker_output = nitpycker.split("\n", 1)
         self.assertEqual(collections.Counter(unittest_results), collections.Counter(nitpycker_results))
+
         self.assertEqual(unittest_output, nitpycker_output)
 
     def test_against_unittest(self):
@@ -42,17 +42,13 @@ class MainTest(unittest.TestCase):
         self.maxDiff = None
 
         unittest_output = run_tests(test_pattern)
-        nitpycker_output = run_tests(
-            test_pattern, test_runner=ParallelRunner,
-            plugins_manager=Manager(), process_number=NUMBER_OF_PROCESS, verbosity=1
-        )
+        nitpycker_output = run_tests(test_pattern, test_runner=ParallelRunner)
 
         self.check_output(unittest_output, nitpycker_output)
 
     def test_isolation(self):
         nitpycker_output = run_tests(
-            "check_isolation.py", test_runner=ParallelRunner,
-            plugins_manager=Manager(), process_number=NUMBER_OF_PROCESS, verbosity=1
+            "check_isolation.py", test_runner=ParallelRunner, process_number=NUMBER_OF_PROCESS, verbosity=1
         )
 
         self.assertIn("OK", nitpycker_output, msg="An error occurred while running : \n{}".format(nitpycker_output))

@@ -9,11 +9,9 @@ import multiprocessing
 import queue
 import sys
 import threading
-import time
 import unittest
 
-from nitpycker.plugins.manager import Manager
-from nitpycker.result import InterProcessResult, ResultCollector, ResultAggregator, TestState
+from nitpycker.result import InterProcessResult, ResultCollector
 
 __author__ = "Benjamin Schubert, ben.c.schubert@gmail.com"
 
@@ -22,7 +20,6 @@ class ParallelRunner:
     """
     A parallel test runner for unittest
 
-    :param plugins_manager: the manager to use for plugin handling
     :param process_number: the number of process to launch to run the tests
     :param verbosity: Processes verbosity
     """
@@ -35,53 +32,24 @@ class ParallelRunner:
         :param manager: the plugin manager to be called before and after the run
         :param task_done_notifier: semaphore to acquire to notify from end of task
         """
-        def __init__(self, test: unittest.TestSuite, results_queue: queue.Queue, manager: Manager,
+        def __init__(self, test: unittest.TestSuite, results_queue: queue.Queue,
                      task_done_notifier: threading.Semaphore, **kwargs):
             super().__init__(**kwargs)
             self.test = test
             self.results = InterProcessResult(results_queue)
-            self.manager = manager
             self.task_done = task_done_notifier
 
         def run(self) -> None:
             """ Launches the test and notifies of the result """
-            self.manager.pre_test_start(self.test)
+            try:
+                self.test(self.results)
+            finally:
+                self.task_done.release()
 
-            self.test(self.results)
-
-            self.manager.post_test_end(self.test)
-            self.task_done.release()
-
-    def __init__(self, plugins_manager: Manager, process_number: int, verbosity: int):
+    def __init__(self, stream=None, descriptions=True, verbosity=1, failfast=False, buffer=False, resultclass=None,
+                 warnings=None, process_number=multiprocessing.cpu_count()):
         self.verbosity = verbosity
-        self.plugins_manager = plugins_manager
         self.process_number = process_number
-
-    @staticmethod
-    def print_summary(report: ResultAggregator, time_taken: float) -> None:
-        """
-        Prints a summary of the tests on the screen
-
-        :param report: the test report
-        :param time_taken: the time it took to run the whole testSuite
-        """
-        number_of_tests = sum(len(x) for x in report.results.values())
-
-        print("Ran {number_of_tests} test{s} in {time:.2f}s\n".format(
-            number_of_tests=number_of_tests, s="s" if number_of_tests >= 1 else "", time=time_taken), file=sys.stderr
-        )
-        status = "OK" if report.wasSuccessful() else "FAILED"
-        info = []
-        for state in TestState:
-            if report.results[state.name] and state.name != TestState.success.name:
-                info.append("{description}={number}".format(
-                    description=state.name.replace("_", " "), number=len(report.results[state.name]))
-                )
-
-        if len(info) != 0:
-            print(status, "({})".format(", ".join(info)), file=sys.stderr)
-        else:
-            print(status, file=sys.stderr)
 
     @staticmethod
     def module_can_run_parallel(test_module: unittest.TestSuite) -> bool:
@@ -106,7 +74,7 @@ class ParallelRunner:
         for test_case in test_class:
             return not getattr(test_case, "__no_parallel__", False)
 
-    def run(self, test: unittest.TestSuite) -> ResultAggregator:
+    def run(self, test: unittest.TestSuite):
         """
         Given a TestSuite, will create one process per test case whenever possible and run them concurrently.
         Will then wait for the result and return them
@@ -117,10 +85,7 @@ class ParallelRunner:
         process = []
         resource_manager = multiprocessing.Manager()
         results_queue = resource_manager.Queue()
-        report_queue = resource_manager.Queue()
         tasks_running = resource_manager.BoundedSemaphore(self.process_number)
-
-        start_time = time.time()
 
         test_suites = []
         number_of_tests = 0
@@ -143,31 +108,20 @@ class ParallelRunner:
                     test_suites.append(test_suite)
 
         results_collector = ResultCollector(
-            results_queue, report_queue, self.verbosity, daemon=True, number_of_tests=number_of_tests
-        )
+            results_queue, self.verbosity, daemon=True)
         results_collector.start()
 
         for suite in test_suites:
             tasks_running.acquire()
-            x = self.Process(suite, results_queue, self.plugins_manager, tasks_running)
+            x = self.Process(suite, results_queue, tasks_running)
             x.start()
             process.append(x)
 
         for i in process:
             i.join()
 
-        stop_time = time.time()
-
         results_queue.join()
         results_collector.end_collection()
         results_collector.join()
-        report = ResultAggregator(report_queue.get())
 
-        time_taken = stop_time - start_time
-
-        self.plugins_manager.report(report)
-
-        if self.verbosity:
-            self.print_summary(report, time_taken)
-
-        return report
+        return results_collector
