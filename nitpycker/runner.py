@@ -60,6 +60,17 @@ class ParallelRunner:
         :return: True if the module can be run on parallel, False otherwise
         """
         for test_class in test_module:
+            # if the test is already failed, we just don't filter it
+            # and let the test runner deal with it later
+            if hasattr(unittest.loader, '_FailedTest'):  # import failure in python 3.5+
+                # noinspection PyProtectedMember
+                if isinstance(test_class, unittest.loader._FailedTest):
+                    continue
+            elif hasattr(unittest.loader, 'ModuleImportFailure'):  # import failure in python 3.4
+                # noinspection PyUnresolvedReferences
+                if isinstance(test_class, unittest.loader.ModuleImportFailure):
+                    continue
+
             for test_case in test_class:
                 return not getattr(sys.modules[test_case.__module__], "__no_parallel__", False)
 
