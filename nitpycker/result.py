@@ -154,7 +154,7 @@ class ResultCollector(threading.Thread):
         """ returns the exit value of this thread"""
         if self.__exit_code is None:
             raise Exception("Couldn't get the thread exit code")
-        return self.__exit_code
+        return not self.__exit_code
 
     @staticmethod
     def print_summary(counters, success_counter, time_taken):

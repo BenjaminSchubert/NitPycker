@@ -1,9 +1,7 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-
 """
 Sample tests, not all functioning to compare against unittest output in order to have the same output (enhanced)
 """
+
 
 import unittest
 
@@ -12,6 +10,7 @@ __author__ = "Benjamin Schubert, ben.c.schubert@gmail.com"
 
 
 class MyTestCase(unittest.TestCase):
+    """ test all different test outcomes """
     def test_failure(self):
         self.assertEqual(True, False)
 
@@ -52,18 +51,3 @@ class SetupTest(unittest.TestCase):
 
     def test_value_true(self):
         self.assertTrue(self.value)
-
-
-class NoParallelClass(unittest.TestCase):
-    __no_parallel__ = True
-
-    @classmethod
-    def setUpClass(cls):
-        cls.value = True
-
-    def test_one(self):
-        self.assertTrue(self.value)
-        self.value = False
-
-    def test_two(self):
-        self.assertFalse(self.value)

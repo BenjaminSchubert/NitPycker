@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 
 """
 Tests to check that NitPycker's tests are isolated in different process to limit side-effects

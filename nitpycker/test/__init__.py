@@ -1,6 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-
 """
 Tests for NitPycker
 """
@@ -10,6 +7,7 @@ import os
 import unittest
 from unittest.mock import patch
 import sys
+
 
 __author__ = "Benjamin Schubert, ben.c.schubert@gmail.com"
 
@@ -25,11 +23,11 @@ def run_tests(test_pattern: str, test_runner=unittest.TextTestRunner, **kwargs) 
     :param test_pattern: pattern for the tests to run
     :param test_runner: TestRunner to use
     :param kwargs: arguments to pass to the test runner on creation
-    :return: output of the tests
+    :return: whether the test was successful, output of the tests
     """
     with patch('sys.stderr', new_callable=io.StringIO):
         tests = unittest.defaultTestLoader.discover(start_dir=TEST_SAMPLES, pattern=test_pattern)
-        test_runner(**kwargs).run(test=tests)
+        result = test_runner(**kwargs).run(test=tests)
         output = sys.stderr.getvalue()
 
-        return output
+        return result.wasSuccessful(), output
