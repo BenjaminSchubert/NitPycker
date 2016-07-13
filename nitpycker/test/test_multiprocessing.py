@@ -19,7 +19,7 @@ class MultiprocessingTests(unittest.TestCase):
     Tests related to the multiprocessing part of the framework
     """
     def check_error(self, string, output, result):
-        if string not in output:
+        if string not in output:  # pragma: nocover
             self.fail("An error occurred: \n{}".format(output.replace("\n", "\n\t")))
 
         self.assertTrue(result)
@@ -43,5 +43,5 @@ class MultiprocessingTests(unittest.TestCase):
         self.check_error("OK", output, result)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

@@ -74,7 +74,7 @@ class UnittestComparisonTest(unittest.TestCase):
         in1 = unittest_output - nitpycker_output
         in2 = nitpycker_output - unittest_output
 
-        if any([in1, in2]):
+        if any([in1, in2]):  # pragma: nocover
             err_message = "The two outputs are not the same:\n"
 
             if in1:
