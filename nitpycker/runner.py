@@ -1,7 +1,7 @@
 """
 This modules implements a Parallel test runner for unittest
 """
-
+from pickle import PicklingError
 
 import collections
 import multiprocessing
@@ -75,7 +75,7 @@ class ParallelRunner:
             """ Launches the test and notifies of the result """
             try:
                 self.test(self.results)
-            except TypeError as exc:
+            except (PicklingError, TypeError) as exc:  # PicklingError is in Python 3.4, TypeError in Python 3.5
                 self.results_queue.put((TestState.serialization_failure, self.index, exc))
             finally:
                 self.task_done.release()
