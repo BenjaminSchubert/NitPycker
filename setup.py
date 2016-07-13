@@ -7,7 +7,7 @@ Setup declaration to install NitPycker
 
 params = dict(
     name='NitPycker',
-    version='0.1',
+    version='0.2.0a1',
     packages=['nitpycker'],
     url='https://github.com/BenjaminSchubert/NitPycker',
     download_url="https://github.com/BenjaminSchubert/NitPycker/tar.gz/0.1",

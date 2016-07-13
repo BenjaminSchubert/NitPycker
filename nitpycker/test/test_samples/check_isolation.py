@@ -1,10 +1,10 @@
-#!/usr/bin/env python3
-
 """
 Tests to check that NitPycker's tests are isolated in different process to limit side-effects
 """
 
+
 import unittest
+
 
 __author__ = "Benjamin Schubert, ben.c.schubert@gmail.com"
 

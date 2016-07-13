@@ -1,21 +1,26 @@
 #!/usr/bin/python3
-# -*- coding: utf-8 -*-
+
+"""
+Nitpycker's main program
+
+This mimics as closely as possible the behavior of the main unittest program
+"""
+
+
+import sys
 from unittest import TestProgram, signals
+
+from . import runner
 
 
 __author__ = "Benjamin Schubert <ben.c.schubert@gmail.com>"
 
 
-"""Unittest main program"""
-
-import sys
-
-from . import runner
-
-
 class NitPyckerProgram(TestProgram):
-    """A command-line program that runs a set of tests; this is primarily
-       for making test modules conveniently executable.
+    """
+    A command-line program that runs a set of tests
+
+    this is primarily for making test modules conveniently executable.
     """
     def runTests(self):
         if self.catchbreak:

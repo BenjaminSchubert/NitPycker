@@ -1,6 +1,3 @@
-#!/usr/bin/python3
-# -*- coding: UTF-8 -*-
-
 """
 This is nitpycker, a fully unittest compatible testing framework
 """

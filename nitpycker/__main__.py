@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 
 """
 Main entry point
 
 Copying exactly the one from unittest
 """
+
 
 import sys
 if sys.argv[0].endswith("__main__.py"):
@@ -19,6 +19,7 @@ if sys.argv[0].endswith("__main__.py"):
     del os
 
 __unittest = True
+
 
 from .main import main
 

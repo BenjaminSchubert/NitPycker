@@ -1,23 +1,15 @@
-#!/usr/bin/python3
-# -*- coding: UTF-8 -*-
-
 """
 Results handler for a multiprocessing setup of unittest.py
 """
 
 import enum
+import operator
 import queue
-import sys
 import threading
 import time
 import unittest
 import unittest.case
 import unittest.result
-
-# noinspection PyProtectedMember
-from unittest.runner import _WritelnDecorator
-
-import collections
 
 from nitpycker.excinfo import FrozenExcInfo
 
@@ -70,7 +62,7 @@ class InterProcessResult(unittest.result.TestResult):
 
     def addSuccess(self, test: unittest.case.TestCase) -> None:
         """
-        Transforms the test in a pickable version of it and sends it to a queue for further analysis
+        Transforms the test in a serializable version of it and sends it to a queue for further analysis
 
         :param test: the test to save
         """
@@ -79,7 +71,7 @@ class InterProcessResult(unittest.result.TestResult):
 
     def addFailure(self, test: unittest.case.TestCase, exc_info: tuple) -> None:
         """
-        Transforms the test in a pickable version of it and sends it to a queue for further analysis
+        Transforms the test in a serializable version of it and sends it to a queue for further analysis
 
         :param test: the test to save
         :param exc_info: tuple of the form (Exception class, Exception instance, traceback)
@@ -89,7 +81,7 @@ class InterProcessResult(unittest.result.TestResult):
 
     def addError(self, test: unittest.case.TestCase, exc_info: tuple) -> None:
         """
-        Transforms the test in a pickable version of it and sends it to a queue for further analysis
+        Transforms the test in a serializable version of it and sends it to a queue for further analysis
 
         :param test: the test to save
         :param exc_info: tuple of the form (Exception class, Exception instance, traceback)
@@ -99,7 +91,7 @@ class InterProcessResult(unittest.result.TestResult):
 
     def addExpectedFailure(self, test: unittest.case.TestCase, err: tuple) -> None:
         """
-        Transforms the test in a pickable version of it and sends it to a queue for further analysis
+        Transforms the test in a serializable version of it and sends it to a queue for further analysis
 
         :param test: the test to save
         :param err: tuple of the form (Exception class, Exception instance, traceback)
@@ -109,7 +101,7 @@ class InterProcessResult(unittest.result.TestResult):
 
     def addUnexpectedSuccess(self, test: unittest.case.TestCase) -> None:
         """
-        Transforms the test in a pickable version of it and sends it to a queue for further analysis
+        Transforms the test in a serializable version of it and sends it to a queue for further analysis
 
         :param test: the test to save
         """
@@ -118,7 +110,7 @@ class InterProcessResult(unittest.result.TestResult):
 
     def addSkip(self, test: unittest.case.TestCase, reason: str):
         """
-        Transforms the test in a pickable version of it and sends it to a queue for further analysis
+        Transforms the test in a serializable version of it and sends it to a queue for further analysis
 
         :param test: the test to save
         :param reason: the reason why the test was skipped
@@ -128,19 +120,39 @@ class InterProcessResult(unittest.result.TestResult):
         self.result_queue.put((TestState.skipped, test, reason))
 
 
-class ResultCollector(threading.Thread):
+class ResultCollector(threading.Thread, unittest.result.TestResult):
     """
     Results handler. Given a report queue, will reform a complete report from it as what would come from a run
     of unittest.TestResult
+
+    :param stream: stream on which to write information
+    :param descriptions: whether to display tests descriptions or not
+    :param verbosity: the verbosity used for the test result reporters
+    :param result_queue: queue form which to get the test results
+    :param test_results: list of testResults instances to use
     """
-    def __init__(self, result_queue: queue.Queue, verbosity: int, **kwargs):
-        super().__init__(**kwargs)
-        self.CHANGEME = unittest.TextTestResult(_WritelnDecorator(sys.stderr), True, 1)  # FIXME : remove
+    def __init__(self, stream=None, descriptions=None, verbosity=None, *, result_queue: queue.Queue, test_results):
+        threading.Thread.__init__(self)
+        unittest.result.TestResult.__init__(self, stream, descriptions, verbosity)
+        self.test_results = test_results
+
+        for testResult in self.test_results:
+            if hasattr(testResult, "separator1"):
+                self.separator1 = testResult.separator1
+                break
+
+        for testResult in self.test_results:
+            if hasattr(testResult, "separator2"):
+                self.separator2 = testResult.separator2
+                break
+
         self.result_queue = result_queue
         self.cleanup = False
         self.showAll = verbosity > 1
         self.dots = verbosity == 1
-        self.__exit_code = None
+
+        self.stream = stream
+        self.descriptions = descriptions
 
         self.results = {}
         for state in TestState:
@@ -150,77 +162,138 @@ class ResultCollector(threading.Thread):
         """ Tells the thread that is it time to end """
         self.cleanup = True
 
-    def wasSuccessful(self):
-        """ returns the exit value of this thread"""
-        if self.__exit_code is None:
-            raise Exception("Couldn't get the thread exit code")
-        return not self.__exit_code
-
-    @staticmethod
-    def print_summary(counters, success_counter, time_taken):
+    def _call_test_results(self, method_name, *args, **kwargs):
         """
-        Prints the test summary, how many, how long it took, etc
+        calls the given method on every test results instances
 
-        :param counters: a collections.Counter containing failing tests
-        :param success_counter: number of successful tests
-        :param time_taken: the time all tests took to run
+        :param method_name: name of the method to call
+        :param args: arguments to pass to the method
+        :param kwargs: keyword arguments to pass to the method
         """
-        errors = sum(counters.values())
+        method = operator.methodcaller(method_name, *args, **kwargs)
+        for testResult in self.test_results:
+            method(testResult)
 
-        sys.stderr.write("-" * 70 + "\n")
-        sys.stderr.write("Ran {number_of_tests} test{s} in {time:.2f}s\n\n".format(
-            number_of_tests=errors + success_counter, s="s" if errors > 1 else "", time=time_taken),
-        )
+    # noinspection PyPep8Naming
+    def getDescription(self, test):
+        """
+        Get the description of the test
 
-        info = []
-        for state in TestState:
-            if counters[state]:
-                info.append("{description}={number}".format(
-                    description=state.value, number=counters[state])
-                )
-
-        if len(info) != 0:
-            sys.stderr.write("FAILED " + "({})".format(", ".join(info)) + "\n")
+        :param test: test from which to get the description
+        :return: description of the test
+        """
+        doc_first_line = test.shortDescription()
+        if self.descriptions and doc_first_line:
+            return '\n'.join((str(test), doc_first_line))
         else:
-            sys.stderr.write("OK\n")
+            return str(test)
+
+    def test_info(self, test):
+        """
+        writes test description on the stream used for reporting
+
+        :param test: test for which to display information
+        """
+        if self.showAll:
+            self.stream.write(self.getDescription(test))
+            self.stream.write(" ... ")
+            self.stream.flush()
+
+    def addError(self, test, err):
+        """
+        registers a test as error
+
+        :param test: test to register
+        :param err: error the test gave
+        """
+        super().addError(test, err)
+        self.test_info(test)
+        self._call_test_results('addError', test, err)
+
+    def addExpectedFailure(self, test, err):
+        """
+        registers as test as expected failure
+
+        :param test: test to register
+        :param err: error the test gave
+        """
+        super().addExpectedFailure(test, err)
+        self.test_info(test)
+        self._call_test_results('addExpectedFailure', test, err)
+
+    def addFailure(self, test, err):
+        """
+        registers a test as failure
+
+        :param test: test to register
+        :param err: error the test gave
+        """
+        super().addFailure(test, err)
+        self.test_info(test)
+        self._call_test_results('addFailure', test, err)
+
+    def addSkip(self, test, reason):
+        """
+        registers a test as skipped
+
+        :param test: test to register
+        :param reason: reason why the test was skipped
+        """
+        super().addSkip(test, reason)
+        self.test_info(test)
+        self._call_test_results('addSkip', test, reason)
+
+    def addSuccess(self, test):
+        """
+        registers a test as successful
+
+        :param test: test to register
+        """
+        super().addSuccess(test)
+        self.test_info(test)
+        self._call_test_results('addSuccess', test)
+
+    def addUnexpectedSuccess(self, test):
+        """
+        registers a test as an unexpected success
+
+        :param test: test to register
+        """
+        super().addUnexpectedSuccess(test)
+        self.test_info(test)
+        self._call_test_results('addUnexpectedSuccess', test)
+
+    def printErrors(self):
+        """
+        print test report
+        """
+        self._call_test_results('printErrors')
 
     def run(self) -> None:
         """
-        Iterates over the items in the queue until a SIGTERM is received. On SIGTERM finishes processing and outputs the
-        result of it. Then sends the full report on the report_queue
+        processes entries in the queue until told to stop
         """
-        counters = collections.Counter()
-        success_counter = 0
-        start_time = time.time()
-
         while not self.cleanup:
             try:
                 result, test, additional_info = self.result_queue.get(timeout=1)
             except queue.Empty:
                 continue
 
+            self.testsRun += 1
             self.result_queue.task_done()
 
             if result == TestState.success:
-                self.CHANGEME.addSuccess(test)
-                success_counter += 1
+                self.addSuccess(test)
             else:
-                counters.update((result,))
                 if result == TestState.failure:
-                    self.CHANGEME.addFailure(test, additional_info)
+                    self.addFailure(test, additional_info)
                 elif result == TestState.error:
-                    self.CHANGEME.addError(test, additional_info)
+                    self.addError(test, additional_info)
                 elif result == TestState.skipped:
-                    self.CHANGEME.addSkip(test, additional_info)
+                    self.addSkip(test, additional_info)
                 elif result == TestState.expected_failure:
-                    self.CHANGEME.addExpectedFailure(test, additional_info)
+                    self.addExpectedFailure(test, additional_info)
                 elif result == TestState.unexpected_success:
-                    self.CHANGEME.addUnexpectedSuccess(test)
+                    self.addUnexpectedSuccess(test)
                 else:
                     raise Exception("This is not a valid test type :", result)
-
-        time_taken = time.time() - start_time
-
-        self.CHANGEME.printErrors()
-        self.print_summary(counters, success_counter, time_taken)
-        self.__exit_code = any(counters.values())
