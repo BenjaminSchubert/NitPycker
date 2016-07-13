@@ -145,6 +145,40 @@ class ParallelRunner:
         for test_case in test_class:
             return not getattr(test_case, "__no_parallel__", False)
 
+    def collect_tests(self, tests):
+        """
+        split all tests into chunks to be executed on multiple processes
+
+        :param tests: tests that need to be run
+        :return: list of tests suites, test that need to be run locally
+        """
+
+        test_suites = []
+        local_test_suites = unittest.TestSuite()
+
+        for test_module in tests:
+            try:
+                can_run_parallel = self.module_can_run_parallel(test_module)
+            except TestClassNotIterable:
+                local_test_suites.addTest(test_module)
+                continue
+            else:
+                if not can_run_parallel:
+                    test_suites.append(test_module)
+                    continue
+
+            for test_class in test_module:
+                if not self.class_can_run_parallel(test_class):
+                    test_suites.append(test_class)
+                    continue
+
+                for _test in test_class:
+                    test_suite = unittest.TestSuite()
+                    test_suite.addTest(_test)
+                    test_suites.append(test_suite)
+
+        return test_suites, local_test_suites
+
     def print_summary(self, result, time_taken):
         """
         Prints the test summary, how many tests failed, how long it took, etc
@@ -196,29 +230,7 @@ class ParallelRunner:
         results_queue = resource_manager.Queue()
         tasks_running = resource_manager.BoundedSemaphore(self.process_number)
 
-        test_suites = []
-        local_test_suites = unittest.TestSuite()
-
-        for test_module in test:
-            try:
-                can_run_parallel = self.module_can_run_parallel(test_module)
-            except TestClassNotIterable:
-                local_test_suites.addTest(test_module)
-                continue
-            else:
-                if not can_run_parallel:
-                    test_suites.append(test_module)
-                    continue
-
-            for test_class in test_module:
-                if not self.class_can_run_parallel(test_class):
-                    test_suites.append(test_class)
-                    continue
-
-                for _test in test_class:
-                    test_suite = unittest.TestSuite()
-                    test_suite.addTest(_test)
-                    test_suites.append(test_suite)
+        test_suites, local_test_suites = self.collect_tests(test)
 
         results_collector = ResultCollector(
             self.stream, self.descriptions, self.verbosity,
