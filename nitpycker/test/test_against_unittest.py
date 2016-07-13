@@ -7,10 +7,12 @@ of unittest in cases where no multiprocessing is involved
 
 
 import unittest
+import warnings
 
 import os
 import re
 
+from nitpycker.result import SerializationWarning
 from nitpycker.runner import ParallelRunner
 from nitpycker.test import run_tests
 
@@ -23,6 +25,7 @@ test_modules = [
     "check_class_no_parallel.py",
     "check_module_no_parallel.py",
     "check_module_import_failure.py",
+    "check_unserializable.py"
 ]
 
 test_args = [
@@ -129,8 +132,10 @@ class UnittestComparisonTest(unittest.TestCase):
         :param verbosity: verbosity with which the test
         :param kwargs: additional arguments to pass to the test runners
         """
-        result1, unittest_output = run_tests(test_pattern, verbosity=verbosity, **kwargs)
-        result2, nitpycker_output = run_tests(test_pattern, test_runner=ParallelRunner, verbosity=verbosity, **kwargs)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", SerializationWarning)
+            result1, unittest_output = run_tests(test_pattern, verbosity=verbosity, **kwargs)
+            result2, nitpycker_output = run_tests(test_pattern, test_runner=ParallelRunner, verbosity=verbosity, **kwargs)
 
         regex_time_spent = r'Ran \d+ test(s)? in \d+\.\d+s'
         unittest_time = re.search(regex_time_spent, unittest_output)

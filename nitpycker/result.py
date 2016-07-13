@@ -3,6 +3,8 @@ Results handler for a multiprocessing setup of unittest.py
 """
 
 import enum
+import warnings
+
 import operator
 import queue
 import threading
@@ -27,6 +29,13 @@ class TestState(enum.Enum):
     skipped = "skipped"
     expected_failure = "expected failures"
     unexpected_success = "unexpected successes"
+    serialization_failure = "Serialization failure"
+
+
+class SerializationWarning(UserWarning):
+    """
+    Warning to be raised when a solveable problem appeared while serializing an object
+    """
 
 
 class InterProcessResult(unittest.result.TestResult):
@@ -130,8 +139,10 @@ class ResultCollector(threading.Thread, unittest.result.TestResult):
     :param verbosity: the verbosity used for the test result reporters
     :param result_queue: queue form which to get the test results
     :param test_results: list of testResults instances to use
+    :param tests: list of tests that are currently run
     """
-    def __init__(self, stream=None, descriptions=None, verbosity=None, *, result_queue: queue.Queue, test_results):
+    def __init__(self, stream=None, descriptions=None, verbosity=None, *, result_queue: queue.Queue, test_results,
+                 tests):
         threading.Thread.__init__(self)
         unittest.result.TestResult.__init__(self, stream, descriptions, verbosity)
         self.test_results = test_results
@@ -154,9 +165,7 @@ class ResultCollector(threading.Thread, unittest.result.TestResult):
         self.stream = stream
         self.descriptions = descriptions
 
-        self.results = {}
-        for state in TestState:
-            self.results[state.name] = []
+        self.tests = tests
 
     def end_collection(self) -> None:
         """ Tells the thread that is it time to end """
@@ -279,13 +288,20 @@ class ResultCollector(threading.Thread, unittest.result.TestResult):
             except queue.Empty:
                 continue
 
-            self.testsRun += 1
             self.result_queue.task_done()
 
-            if result == TestState.success:
-                self.addSuccess(test)
+            if result == TestState.serialization_failure:
+                test = self.tests[test]
+                warnings.warn("Serialization error: {} on test {}".format(
+                    additional_info, test), SerializationWarning)
+                test(self)
+
             else:
-                if result == TestState.failure:
+                self.testsRun += 1
+
+                if result == TestState.success:
+                    self.addSuccess(test)
+                elif result == TestState.failure:
                     self.addFailure(test, additional_info)
                 elif result == TestState.error:
                     self.addError(test, additional_info)

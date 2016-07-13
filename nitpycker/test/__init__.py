@@ -5,8 +5,6 @@ Tests for NitPycker
 import io
 import os
 import unittest
-from unittest.mock import patch
-import sys
 
 
 __author__ = "Benjamin Schubert, ben.c.schubert@gmail.com"
@@ -25,9 +23,8 @@ def run_tests(test_pattern: str, test_runner=unittest.TextTestRunner, **kwargs) 
     :param kwargs: arguments to pass to the test runner on creation
     :return: whether the test was successful, output of the tests
     """
-    with patch('sys.stderr', new_callable=io.StringIO):
-        tests = unittest.defaultTestLoader.discover(start_dir=TEST_SAMPLES, pattern=test_pattern)
-        result = test_runner(**kwargs).run(test=tests)
-        output = sys.stderr.getvalue()
+    output = io.StringIO()
+    tests = unittest.defaultTestLoader.discover(start_dir=TEST_SAMPLES, pattern=test_pattern)
+    result = test_runner(stream=output, **kwargs).run(test=tests)
 
-        return result.wasSuccessful(), output
+    return result.wasSuccessful(), output.getvalue()

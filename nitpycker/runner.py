@@ -14,7 +14,7 @@ import unittest
 # noinspection PyProtectedMember
 from unittest.runner import _WritelnDecorator, TextTestResult
 
-from nitpycker.result import InterProcessResult, ResultCollector
+from nitpycker.result import InterProcessResult, ResultCollector, TestState
 
 
 __author__ = "Benjamin Schubert, ben.c.schubert@gmail.com"
@@ -55,23 +55,28 @@ class ParallelRunner:
         """
         A simple test runner for a TestSuite.
 
-        :param test: the unittest.TestSuite to rnu
+        :param index: index to find the test
+        :param test: the unittest.TestSuite to run
         :param results_queue: a queue where to put the results once done
         :param manager: the plugin manager to be called before and after the run
         :param task_done_notifier: semaphore to acquire to notify from end of task
         :param kwargs: additional arguments to pass to the process
         """
-        def __init__(self, test: unittest.TestSuite, results_queue: queue.Queue,
+        def __init__(self, index: int, test: unittest.TestSuite, results_queue: queue.Queue,
                      task_done_notifier: threading.Semaphore, **kwargs):
             super().__init__(**kwargs)
+            self.index = index
             self.test = test
             self.results = InterProcessResult(results_queue)
+            self.results_queue = results_queue
             self.task_done = task_done_notifier
 
         def run(self) -> None:
             """ Launches the test and notifies of the result """
             try:
                 self.test(self.results)
+            except TypeError as exc:
+                self.results_queue.put((TestState.serialization_failure, self.index, exc))
             finally:
                 self.task_done.release()
 
@@ -217,14 +222,15 @@ class ParallelRunner:
 
         results_collector = ResultCollector(
             self.stream, self.descriptions, self.verbosity,
-            result_queue=results_queue, test_results=self._makeResult()
+            result_queue=results_queue, test_results=self._makeResult(),
+            tests=test_suites
         )
 
         results_collector.start()
 
-        for suite in test_suites:
+        for index, suite in enumerate(test_suites):
             tasks_running.acquire()
-            x = self.Process(suite, results_queue, tasks_running)
+            x = self.Process(index, suite, results_queue, tasks_running)
             x.start()
             process.append(x)
 
