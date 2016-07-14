@@ -3,11 +3,7 @@ Results handler for a multiprocessing setup of unittest.py
 """
 
 import enum
-import warnings
-
 import operator
-import queue
-import threading
 import time
 import unittest
 import unittest.case
@@ -29,23 +25,16 @@ class TestState(enum.Enum):
     skipped = "skipped"
     expected_failure = "expected failures"
     unexpected_success = "unexpected successes"
-    serialization_failure = "Serialization failure"
-
-
-class SerializationWarning(UserWarning):
-    """
-    Warning to be raised when a solveable problem appeared while serializing an object
-    """
 
 
 class InterProcessResult(unittest.result.TestResult):
     """
     A TestResult implementation to put results in a queue, for another thread to consume
     """
-    def __init__(self, result_queue: queue.Queue):
+    def __init__(self):
         super().__init__()
-        self.result_queue = result_queue
         self.start_time = self.stop_time = None
+        self.tests = []
 
     def startTest(self, test: unittest.case.TestCase) -> None:
         """
@@ -63,11 +52,11 @@ class InterProcessResult(unittest.result.TestResult):
         :param test: the test
         :param exc_info: additional execution information
         """
-        if exc_info is not None:
+        if exc_info is not None and not isinstance(exc_info, str):
             exc_info = FrozenExcInfo(exc_info)
         test.time_taken = time.time() - self.start_time
         test._outcome = None
-        self.result_queue.put((_type, test, exc_info))
+        self.tests.append((_type, test, exc_info))
 
     def addSuccess(self, test: unittest.case.TestCase) -> None:
         """
@@ -124,12 +113,19 @@ class InterProcessResult(unittest.result.TestResult):
         :param test: the test to save
         :param reason: the reason why the test was skipped
         """
-        test.time_taken = time.time() - self.start_time
-        test._outcome = None
-        self.result_queue.put((TestState.skipped, test, reason))
+        # noinspection PyTypeChecker
+        self.add_result(TestState.skipped, test, reason)
+
+    def get_results(self):
+        """
+        get the results from running the test
+
+        :return: list of result
+        """
+        return self.tests
 
 
-class ResultCollector(threading.Thread, unittest.result.TestResult):
+class ResultCollector(unittest.result.TestResult):
     """
     Results handler. Given a report queue, will reform a complete report from it as what would come from a run
     of unittest.TestResult
@@ -137,13 +133,9 @@ class ResultCollector(threading.Thread, unittest.result.TestResult):
     :param stream: stream on which to write information
     :param descriptions: whether to display tests descriptions or not
     :param verbosity: the verbosity used for the test result reporters
-    :param result_queue: queue form which to get the test results
     :param test_results: list of testResults instances to use
-    :param tests: list of tests that are currently run
     """
-    def __init__(self, stream=None, descriptions=None, verbosity=None, *, result_queue: queue.Queue, test_results,
-                 tests):
-        threading.Thread.__init__(self)
+    def __init__(self, stream=None, descriptions=None, verbosity=None, *, test_results):
         unittest.result.TestResult.__init__(self, stream, descriptions, verbosity)
         self.test_results = test_results
 
@@ -157,19 +149,11 @@ class ResultCollector(threading.Thread, unittest.result.TestResult):
                 self.separator2 = testResult.separator2
                 break
 
-        self.result_queue = result_queue
-        self.cleanup = False
         self.showAll = verbosity > 1
         self.dots = verbosity == 1
 
         self.stream = stream
         self.descriptions = descriptions
-
-        self.tests = tests
-
-    def end_collection(self) -> None:
-        """ Tells the thread that is it time to end """
-        self.cleanup = True
 
     def _call_test_results(self, method_name, *args, **kwargs):
         """
@@ -278,38 +262,23 @@ class ResultCollector(threading.Thread, unittest.result.TestResult):
         """
         self._call_test_results('printErrors')
 
-    def run(self) -> None:
+    def register(self, result, test, additional_info) -> None:
         """
         processes entries in the queue until told to stop
         """
-        while not self.cleanup:
-            try:
-                result, test, additional_info = self.result_queue.get(timeout=1)
-            except queue.Empty:
-                continue
+        self.testsRun += 1
 
-            self.result_queue.task_done()
-
-            if result == TestState.serialization_failure:
-                test = self.tests[test]
-                warnings.warn("Serialization error: {} on test {}".format(
-                    additional_info, test), SerializationWarning)
-                test(self)
-
-            else:
-                self.testsRun += 1
-
-                if result == TestState.success:
-                    self.addSuccess(test)
-                elif result == TestState.failure:
-                    self.addFailure(test, additional_info)
-                elif result == TestState.error:
-                    self.addError(test, additional_info)
-                elif result == TestState.skipped:
-                    self.addSkip(test, additional_info)
-                elif result == TestState.expected_failure:
-                    self.addExpectedFailure(test, additional_info)
-                elif result == TestState.unexpected_success:
-                    self.addUnexpectedSuccess(test)
-                else:
-                    raise Exception("This is not a valid test type :", result)
+        if result == TestState.success:
+            self.addSuccess(test)
+        elif result == TestState.failure:
+            self.addFailure(test, additional_info)
+        elif result == TestState.error:
+            self.addError(test, additional_info)
+        elif result == TestState.skipped:
+            self.addSkip(test, additional_info)
+        elif result == TestState.expected_failure:
+            self.addExpectedFailure(test, additional_info)
+        elif result == TestState.unexpected_success:
+            self.addUnexpectedSuccess(test)
+        else:
+            raise Exception("This is not a valid test type :", result)

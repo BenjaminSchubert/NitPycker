@@ -1,20 +1,19 @@
 """
 This modules implements a Parallel test runner for unittest
 """
-from pickle import PicklingError
+
 
 import collections
-import multiprocessing
-import multiprocessing.managers
-import queue
+from multiprocessing import Process, cpu_count
+from multiprocessing.pool import Pool, MaybeEncodingError
 import sys
-import threading
 import time
 import unittest
 # noinspection PyProtectedMember
 from unittest.runner import _WritelnDecorator, TextTestResult
+import warnings
 
-from nitpycker.result import InterProcessResult, ResultCollector, TestState
+from nitpycker.result import InterProcessResult, ResultCollector
 
 
 __author__ = "Benjamin Schubert, ben.c.schubert@gmail.com"
@@ -27,6 +26,53 @@ class TestClassNotIterable(Exception):
     imported correctly, and will likely not be serializable, so
     we should run it locally
     """
+
+
+class SerializationWarning(UserWarning):
+    """
+    Warning to be raised when a solvable problem appeared while serializing an object
+    """
+
+
+class NonDaemonizeableProcess(Process):
+    """
+    Process that cannot be set as a daemon
+    """
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    @property
+    def daemon(self):
+        """ whether the process is a daemon or not, this is always false """
+        return False
+
+    @daemon.setter
+    def daemon(self, daemonic):
+        pass
+
+
+class NitPyckerPool(Pool):
+    """
+    Process pool that uses a non daemonizable process for its job
+    """
+    Process = NonDaemonizeableProcess
+
+    def __reduce__(self):
+        raise NotImplementedError('pool objects cannot be passed between processes or pickled')
+
+
+def run_test(args):
+    """
+    runs the test given as argument
+
+    :param args: tuple containing an id for the test and the test to run
+    :return: index, results of the tests
+    """
+    index, test = args
+
+    result = InterProcessResult()
+    test.run(result)
+    return index, result.get_results()
 
 
 class ParallelRunner:
@@ -51,37 +97,8 @@ class ParallelRunner:
     resultclass = (TextTestResult,)
     result_collector_class = ResultCollector
 
-    class Process(multiprocessing.Process):
-        """
-        A simple test runner for a TestSuite.
-
-        :param index: index to find the test
-        :param test: the unittest.TestSuite to run
-        :param results_queue: a queue where to put the results once done
-        :param manager: the plugin manager to be called before and after the run
-        :param task_done_notifier: semaphore to acquire to notify from end of task
-        :param kwargs: additional arguments to pass to the process
-        """
-        def __init__(self, index: int, test: unittest.TestSuite, results_queue: queue.Queue,
-                     task_done_notifier: threading.Semaphore, **kwargs):
-            super().__init__(**kwargs)
-            self.index = index
-            self.test = test
-            self.results = InterProcessResult(results_queue)
-            self.results_queue = results_queue
-            self.task_done = task_done_notifier
-
-        def run(self) -> None:
-            """ Launches the test and notifies of the result """
-            try:
-                self.test(self.results)
-            except (PicklingError, TypeError) as exc:  # PicklingError is in Python 3.4, TypeError in Python 3.5
-                self.results_queue.put((TestState.serialization_failure, self.index, exc))
-            finally:
-                self.task_done.release()
-
     def __init__(self, stream=None, descriptions=True, verbosity=1, failfast=False, buffer=False, resultclass=None,
-                 warnings=None, *, tb_locals=False, process_number=multiprocessing.cpu_count(),
+                 warnings=None, *, tb_locals=False, process_number=cpu_count(),
                  result_collector_class=None):
         if stream is None:
             stream = sys.stderr
@@ -144,6 +161,9 @@ class ParallelRunner:
         """
         for test_case in test_class:
             return not getattr(test_case, "__no_parallel__", False)
+
+        # this only happens when there are no tests in the class
+        return True
 
     def collect_tests(self, tests):
         """
@@ -225,35 +245,36 @@ class ParallelRunner:
         :return: a summary of the test run
         """
         start_time = time.time()
-        process = []
-        resource_manager = multiprocessing.Manager()
-        results_queue = resource_manager.Queue()
-        tasks_running = resource_manager.BoundedSemaphore(self.process_number)
-
         test_suites, local_test_suites = self.collect_tests(test)
 
         results_collector = ResultCollector(
             self.stream, self.descriptions, self.verbosity,
-            result_queue=results_queue, test_results=self._makeResult(),
-            tests=test_suites
+            test_results=self._makeResult(),
         )
 
-        results_collector.start()
+        with NitPyckerPool(self.process_number) as pool:
+            results = pool.imap_unordered(
+                run_test,
+                [(index, suite) for index, suite in enumerate(test_suites)]
+            )
 
-        for index, suite in enumerate(test_suites):
-            tasks_running.acquire()
-            x = self.Process(index, suite, results_queue, tasks_running)
-            x.start()
-            process.append(x)
+            local_test_suites.run(results_collector)
 
-        local_test_suites.run(results_collector)
-
-        for i in process:
-            i.join()
-
-        results_queue.join()
-        results_collector.end_collection()
-        results_collector.join()
+            while True:
+                try:
+                    _, result_list = next(results)
+                except StopIteration:
+                    break
+                except MaybeEncodingError as e:
+                    index = int(e.value.lstrip("(").split(",")[0])
+                    test = test_suites[index]
+                    warnings.warn("Serialization error: {} on test {}".format(
+                        e.exc, test), SerializationWarning)
+                    test.run(results_collector)
+                else:
+                    for result in result_list:
+                        state, test, additional_info = result
+                        results_collector.register(state, test, additional_info)
 
         results_collector.printErrors()
         self.print_summary(results_collector, time.time() - start_time)

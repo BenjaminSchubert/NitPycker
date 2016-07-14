@@ -5,15 +5,12 @@ Tests to check that the output of NitPycker is the same as the one
 of unittest in cases where no multiprocessing is involved
 """
 
-
+import os
+import re
 import unittest
 import warnings
 
-import os
-import re
-
-from nitpycker.result import SerializationWarning
-from nitpycker.runner import ParallelRunner
+from nitpycker.runner import ParallelRunner, SerializationWarning
 from nitpycker.test import run_tests
 
 
@@ -25,7 +22,8 @@ test_modules = [
     "check_class_no_parallel.py",
     "check_module_no_parallel.py",
     "check_module_import_failure.py",
-    "check_unserializable.py"
+    "check_non_serializable.py",
+    "check_tests_with_multiprocessing.py"
 ]
 
 test_args = [
@@ -155,6 +153,8 @@ class UnittestComparisonTest(unittest.TestCase):
             unittest_time.group(0).split(" ")[1], nitpycker_time.group(0).split(" ")[1],
             msg="The number of tests ran by unittest and NitPycker is not the same"
         )
+
+        self.assertGreater(int(unittest_time.group(0).split(" ")[1]), 0, msg="No tests where run")
 
 
 for module in test_modules:  # dynamically add comparisons between nitpycker and unittest
