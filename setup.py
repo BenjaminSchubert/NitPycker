@@ -43,7 +43,7 @@ except ImportError:
 else:
     params['entry_points'] = {
         'console_scripts': [
-            "nitpycker = nitpycker:run"
+            "nitpycker = nitpycker:main"
         ]
     }
 
