@@ -1,3 +1,5 @@
+**This project is abandonned, I would recommend moving to Pytest + xdist**
+
 NitPycker : parallelism for python's unittests
 ==============================================
 
